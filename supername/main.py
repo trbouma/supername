@@ -6,7 +6,7 @@ import typer
 
 
 def main():
-    print("Hello World Supername")
+    print("Hello World Supername, This is the edited file")
     
 
 if __name__ == "__main__":
