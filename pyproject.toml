@@ -20,6 +20,7 @@ psycopg2 = "^2.9.9"
 supername = "supername.main:main"
 
 
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
