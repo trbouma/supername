@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
+import click
 
+@click.command()
+@click.option('--name', prompt='Your name',
+              help='The person to greet.')
+def hello(name):
+    click.echo(f'Hello, {name}!')
 
-
-def main():
-    print("Hello World!")
-    
-
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    hello()
