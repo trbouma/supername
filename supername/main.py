@@ -2,6 +2,8 @@
 
 import click
 
+from lib.simple_package import math_operations
+
 @click.command()
 @click.option('--name', prompt='Your name',
               help='The person to greet.', default='Guest')
@@ -11,6 +13,7 @@ import click
               help='Your superpower.', default='invisibility')
 def main(name, title, superpower):
     click.echo(f'Hello, {title} {name} with your superpower as {superpower}!')
+    print(math_operations.add(5,3))
 
 if __name__ == '__main__':
     main()
