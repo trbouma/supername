@@ -3,7 +3,7 @@
 import click
 
 
-from simple_package import math_operations
+
     
 
 @click.command()
@@ -15,7 +15,7 @@ from simple_package import math_operations
               help='Your superpower.', default='invisibility')
 def main(name, title, superpower):
     click.echo(f'Hello, {title} {name} with your superpower as {superpower}!')
-    print(math_operations.add(5,3))
+    
     print(__name__)
 
 if __name__ == '__main__':
