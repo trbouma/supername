@@ -2,6 +2,8 @@
 
 import click
 
+# Do absolute imports if entry point from package - see [tool.poetry.scripts]
+
 if __name__== 'supername.main':
     import supername.simple_package.math_operations as math_operations
 else:

@@ -19,6 +19,7 @@ click = "^8.1.7"
 
 [tool.poetry.scripts]
 supername = "supername.main:main"
+firetouch = "supername.main:main"
 
 
 
