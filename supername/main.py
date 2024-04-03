@@ -2,7 +2,10 @@
 
 import click
 
-import supername.simple_package.math_operations as math_operations
+if __name__== 'supername.main':
+    import supername.simple_package.math_operations as math_operations
+else:
+    import simple_package.math_operations as math_operations
 
     
 
