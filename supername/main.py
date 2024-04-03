@@ -2,10 +2,10 @@
 
 import click
 
-if __name__ == '__main__':
-    from lib.simple_package import math_operations
-else:
-    from . lib.simple_package import math_operations
+
+from simple_package import math_operations
+
+
     
 
 @click.command()
