@@ -2,7 +2,8 @@
 
 import click
 
-from . simple_package import math_operation
+
+from simple_package import math_operations
     
 
 @click.command()
