@@ -27,7 +27,7 @@ socksio = "^1.0.0"
 
 [tool.poetry.scripts]
 supername = "supername.main:cli"
-firetouch = "supername.main:cli"
+supersend = "supername.main:cli"
 
 
 
