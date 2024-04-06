@@ -18,53 +18,29 @@ else:
     from cashu.core.migrations import migrate_databases
     from cashu.wallet import migrations
 
-def coro(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        return asyncio.run(f(*args, **kwargs))
 
-    return wrapper  
 
-def wallet():
-    mint = "https://mint.nimo.cash"
-    wallet_db = "postgres://postgres:password@abctel.co:6432/nzq1mmzlcm9jaw91cw"
-
-    wallet = Wallet(mint, wallet_db)
-
-    asyncio.run(migrate_databases(wallet.db, migrations))
-    asyncio.run(wallet._init_private_key())
-    asyncio.run(wallet.load_proofs())
-    asyncio.run(wallet.load_mint())
-
-    amount = int(input("what is the amount to receive? "))
-    invoice = asyncio.run(wallet.request_mint(amount))
-    print("invoice:", invoice.bolt11 )
-    print("----")
-    print("id: ", invoice.id)
-    paid = input("have you paid yet?")
-    if paid =='y':
-        asyncio.run(wallet.mint(amount, id=invoice.id))
-        print("balance:", wallet.balance_per_keyset())
-        print(wallet.available_balance)  
+@click.group()
+def cli():
+    pass
 
 @click.command()
-@click.option('--name', prompt='Your name',
-              help='The person to greet.', default='Guest')
-@click.option('--title', prompt='Your title',
-              help='The title to greet.', default='Honourable')
-@click.option('--superpower', prompt='Your superpower',
-              help='Your superpower.', default='invisibility')
-@click.argument('command', default='view')
+@click.option('--unit', default='sat', help='unit of account')
+@click.argument('amount', default=21)
+@click.argument('recipient', default='hello@supername')
+def send(amount, recipient, unit):
+    click.echo(f'Send  {amount} {unit} to {recipient}')
 
-def main(command, name, title, superpower):
-    click.echo(f'Hello, {title} {name} commanding {command} with your superpower as {superpower}!')
-    print(math_operations.add(5,3))
-    print(__name__)
+@click.command()
+def receive():
+    click.echo('Receive')
 
+cli.add_command(send)
+cli.add_command(receive)
     
 
 
 
 
 if __name__ == '__main__':
-    main()
+    cli()
