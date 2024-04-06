@@ -35,8 +35,13 @@ def send(amount, recipient, unit):
 def receive():
     click.echo('Receive')
 
+@click.command()
+def balance():
+    click.echo('You balance:')
+
 cli.add_command(send)
 cli.add_command(receive)
+cli.add_command(balance)
     
 
 
