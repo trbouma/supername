@@ -36,16 +36,24 @@ def receive():
     click.echo('Receive')
 
 @click.command()
+def info():
+    click.echo('Your information')
+
+@click.command()
 def balance():
-    click.echo('You balance:')
+    click.echo('Your balance:')
+
+@click.command()
+@click.argument('key', default='None')
+def login(key):
+    click.echo(f'Login with your key {key}')
 
 cli.add_command(send)
 cli.add_command(receive)
 cli.add_command(balance)
+cli.add_command(info)
+cli.add_command(login)
     
-
-
-
 
 if __name__ == '__main__':
     cli()
