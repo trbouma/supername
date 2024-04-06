@@ -26,8 +26,8 @@ asyncio = "^3.4.3"
 socksio = "^1.0.0"
 
 [tool.poetry.scripts]
-supername = "supername.main:main"
-firetouch = "supername.main:main"
+supername = "supername.main:cli"
+firetouch = "supername.main:cli"
 
 
 
