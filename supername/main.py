@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import click, asyncio
+from functools import wraps
 
 # Do absolute imports if entry point from package - see [tool.poetry.scripts]
 
@@ -17,20 +18,14 @@ else:
     from cashu.core.migrations import migrate_databases
     from cashu.wallet import migrations
 
-    
+def coro(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        return asyncio.run(f(*args, **kwargs))
 
-@click.command()
-@click.option('--name', prompt='Your name',
-              help='The person to greet.', default='Guest')
-@click.option('--title', prompt='Your title',
-              help='The title to greet.', default='Honourable')
-@click.option('--superpower', prompt='Your superpower',
-              help='Your superpower.', default='invisibility')
-def main(name, title, superpower):
-    click.echo(f'Hello, {title} {name} with your superpower as {superpower}!')
-    print(math_operations.add(5,3))
-    print(__name__)
+    return wrapper  
 
+def wallet():
     mint = "https://mint.nimo.cash"
     wallet_db = "postgres://postgres:password@abctel.co:6432/nzq1mmzlcm9jaw91cw"
 
@@ -50,7 +45,25 @@ def main(name, title, superpower):
     if paid =='y':
         asyncio.run(wallet.mint(amount, id=invoice.id))
         print("balance:", wallet.balance_per_keyset())
-        print(wallet.available_balance)
+        print(wallet.available_balance)  
+
+@click.command()
+@click.option('--name', prompt='Your name',
+              help='The person to greet.', default='Guest')
+@click.option('--title', prompt='Your title',
+              help='The title to greet.', default='Honourable')
+@click.option('--superpower', prompt='Your superpower',
+              help='Your superpower.', default='invisibility')
+@click.argument('command', default='view')
+
+def main(command, name, title, superpower):
+    click.echo(f'Hello, {title} {name} commanding {command} with your superpower as {superpower}!')
+    print(math_operations.add(5,3))
+    print(__name__)
+
+    
+
+
 
 
 if __name__ == '__main__':
