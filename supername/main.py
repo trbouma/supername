@@ -41,17 +41,18 @@ def cli():
 
 @click.command()
 @click.option('--unit', default='sat', help='unit of account')
+@click.option('--message', default='Thank you!', help='message to send')
 @click.argument('amount', default=21)
 @click.argument('recipient', default='hello@supername')
-def send(amount, recipient, unit):
-    click.echo(f'Send  {amount} {unit} to {recipient}')
+def send(amount, recipient, unit, message):
+    click.echo(f'Send  {amount} {unit} to {recipient} with {message}')
 
     send_url = "https://" + wallet_server + "/wallet/lnpay"
     send_data = {
                     "wallet_key": wallet_key,
                     "ln_address": recipient,
                     "ln_amount": amount,
-                    "ln_comment": "payment",
+                    "ln_comment": message,
                     "ln_currency": "SAT"
                 }
     print(send_url, send_data)
