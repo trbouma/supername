@@ -7,18 +7,7 @@ from functools import wraps
 
 # Do absolute imports if entry point from package - see [tool.poetry.scripts]
 
-if __name__== 'supername.main':
-    import supername.simple_package.math_operations as math_operations
-    from supername.cashu.wallet.wallet import Wallet as Wallet
-    from supername.cashu.wallet.cli.cli_helpers import get_mint_wallet, print_mint_balances, verify_mint
-    from supername.cashu.core.migrations import migrate_databases
-    from supername.cashu.wallet import migrations
-else:
-    import simple_package.math_operations as math_operations
-    from cashu.wallet.wallet import Wallet as Wallet
-    from cashu.wallet.cli.cli_helpers import get_mint_wallet, print_mint_balances, verify_mint
-    from cashu.core.migrations import migrate_databases
-    from cashu.wallet import migrations
+
 
 home_directory = os.path.expanduser('~')
 super_directory = '/.supername'
