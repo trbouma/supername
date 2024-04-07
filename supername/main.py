@@ -1,5 +1,7 @@
 #!/usr/bin/env python
-
+import os
+import yaml
+import requests
 import click, asyncio
 from functools import wraps
 
@@ -18,7 +20,20 @@ else:
     from cashu.core.migrations import migrate_databases
     from cashu.wallet import migrations
 
+home_directory = os.path.expanduser('~')
+super_directory = '/.supername'
+filename = '/config.yml'
+os.makedirs(home_directory+super_directory, exist_ok=True)
+with open(home_directory+super_directory+ filename, 'a') as file:
+    pass
 
+with open(home_directory+super_directory+ filename, 'r') as file:
+    config_obj = yaml.safe_load(file)
+
+print(config_obj['profile']['server'])
+
+wallet_server =config_obj['profile']['server']
+wallet_key =config_obj['profile']['key']
 
 @click.group()
 def cli():
@@ -31,13 +46,25 @@ def cli():
 def send(amount, recipient, unit):
     click.echo(f'Send  {amount} {unit} to {recipient}')
 
+    send_url = "https://" + wallet_server + "/wallet/lnpay"
+    send_data = {
+                    "wallet_key": wallet_key,
+                    "ln_address": recipient,
+                    "ln_amount": amount,
+                    "ln_comment": "payment",
+                    "ln_currency": "SAT"
+                }
+    print(send_url, send_data)
+    response = requests.post(send_url, json=send_data)
+    print(response.text)
+
 @click.command()
 def receive():
     click.echo('Receive')
 
 @click.command()
 def info():
-    click.echo('Your information')
+    click.echo(f'Your information: {home_directory}')
 
 @click.command()
 def balance():
