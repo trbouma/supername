@@ -49,12 +49,29 @@ def send(amount, recipient, unit, message):
     print(response.text)
 
 @click.command()
+def profile():
+    click.echo('Profile')
+
+@click.command()
+@click.argument('name')
+def get(name):
+    click.echo(f'Get {name}')
+    get_url = f"https://{wallet_server}/available/{name}"
+    print(get_url
+          )
+    response = requests.get(get_url)
+    print(response.text)
+                            
+
+
+
+@click.command()
 def receive():
     click.echo('Receive')
 
 @click.command()
 def info():
-    click.echo(f'Your information: {home_directory}')
+    click.echo(f'Your wallet key: {wallet_key}')
 
 @click.command()
 def balance():
@@ -70,6 +87,8 @@ cli.add_command(receive)
 cli.add_command(balance)
 cli.add_command(info)
 cli.add_command(login)
+cli.add_command(profile)
+cli.add_command(get)
     
 
 if __name__ == '__main__':
