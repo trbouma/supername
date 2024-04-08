@@ -10,16 +10,24 @@ from functools import wraps
 
 
 home_directory = os.path.expanduser('~')
-super_directory = '/.supername'
-filename = '/config.yml'
-os.makedirs(home_directory+super_directory, exist_ok=True)
-with open(home_directory+super_directory+ filename, 'a') as file:
-    pass
+super_directory = '.supername'
+config_file = 'config.yml'
+config_directory = os.path.join(home_directory, super_directory)
+file_path = os.path.join(home_directory, super_directory, config_file)
+print('file path:',file_path)
+os.makedirs(config_directory, exist_ok=True)
 
-with open(home_directory+super_directory+ filename, 'r') as file:
-    config_obj = yaml.safe_load(file)
+if os.path.exists(file_path):
+    with open(file_path, 'r') as file:
+        config_obj = yaml.safe_load(file)
+else:
+    config_obj = {'profile': {'key': '123mocha', 'server': 'nimo.cash'}}
+    with open(file_path, 'w') as file:        
+        yaml.dump(config_obj, file)
 
-print(config_obj['profile']['server'])
+
+
+print(config_obj)
 
 wallet_server =config_obj['profile']['server']
 wallet_key =config_obj['profile']['key']
@@ -36,7 +44,12 @@ def cli():
 def send(amount, recipient, unit, message):
     click.echo(f'Send  {amount} {unit} to {recipient} with {message}')
 
-    send_url = "https://" + wallet_server + "/wallet/lnpay"
+    if wallet_server == 'localhost:8000':
+        scheme = "http://"
+    else:
+        scheme = "https://"
+
+    send_url = scheme + wallet_server + "/wallet/lnpay"
     send_data = {
                     "wallet_key": wallet_key,
                     "ln_address": recipient,
@@ -51,6 +64,19 @@ def send(amount, recipient, unit, message):
 @click.command()
 def profile():
     click.echo('Profile')
+
+@click.command()
+@click.option('--key', default=None, help='set super key')
+@click.option('--server', default=None, help='set server')
+def set(key, server):
+    click.echo(f'Set Key {key}, {server}')
+    if key != None:
+        config_obj['profile']['key']=key
+    if server != None:
+        config_obj['profile']['server']=server
+
+    with open(file_path, 'w') as file:        
+        yaml.dump(config_obj, file)
 
 @click.command()
 @click.argument('name')
@@ -89,6 +115,7 @@ cli.add_command(info)
 cli.add_command(login)
 cli.add_command(profile)
 cli.add_command(get)
+cli.add_command(set)
     
 
 if __name__ == '__main__':
