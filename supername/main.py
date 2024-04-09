@@ -39,8 +39,9 @@ def cli():
 @click.command()
 @click.option('--unit', default='sat', help='unit of account')
 @click.option('--message', default='Thank you!', help='message to send')
-@click.argument('amount', default=21)
 @click.argument('recipient', default='hello@supername')
+@click.argument('amount', default=21)
+
 def send(amount, recipient, unit, message):
     click.echo(f'Send  {amount} {unit} to {recipient} with {message}')
 
@@ -50,6 +51,8 @@ def send(amount, recipient, unit, message):
         scheme = "https://"
 
     send_url = scheme + wallet_server + "/wallet/lnpay"
+    headers = {"X-supername": wallet_key }
+
     send_data = {
                     "wallet_key": wallet_key,
                     "ln_address": recipient,
@@ -58,7 +61,7 @@ def send(amount, recipient, unit, message):
                     "ln_currency": "SAT"
                 }
     print(send_url, send_data)
-    response = requests.post(send_url, json=send_data)
+    response = requests.post(send_url, json=send_data, headers=headers)
     print(response.text)
 
 @click.command()
@@ -96,8 +99,10 @@ def receive():
     click.echo('Receive')
 
 @click.command()
-def info():
-    click.echo(f'Your wallet key: {wallet_key}')
+@click.option('--debug/--no-debug', default=False)
+@click.pass_context
+def info(ctx, debug):
+    click.echo(f'Your wallet key: {wallet_key} {debug} {ctx.obj}')
 
 @click.command()
 def balance():
