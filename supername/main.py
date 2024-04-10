@@ -32,37 +32,44 @@ print(config_obj)
 wallet_server =config_obj['profile']['server']
 wallet_key =config_obj['profile']['key']
 
+if wallet_server == 'localhost:8000':
+    scheme = "http://"
+else:
+    scheme = "https://"
+
 @click.group()
 def cli():
     pass
 
+
+
 @click.command()
-@click.option('--unit', default='sat', help='unit of account')
-@click.option('--message', default='Thank you!', help='message to send')
 @click.argument('recipient', default='hello@supername')
 @click.argument('amount', default=21)
+@click.option('--message', default='Thank you!', help='message to send')
+def send(amount, recipient, message):
+    click.echo(f'Send  {amount}  to {recipient} with message {message}')
 
-def send(amount, recipient, unit, message):
-    click.echo(f'Send  {amount} {unit} to {recipient} with {message}')
+   
 
-    if wallet_server == 'localhost:8000':
-        scheme = "http://"
-    else:
-        scheme = "https://"
-
-    send_url = scheme + wallet_server + "/wallet/lnpay"
-    headers = {"X-supername": wallet_key }
+    send_url = scheme + wallet_server + "/supername/send"
+    headers = {"X-superkey": wallet_key }
 
     send_data = {
-                    "wallet_key": wallet_key,
-                    "ln_address": recipient,
-                    "ln_amount": amount,
-                    "ln_comment": message,
-                    "ln_currency": "SAT"
+                    "recipient": recipient,
+                    "amount": amount,
+                    "message": message,
+                    "currency": "SAT"
                 }
-    print(send_url, send_data)
+
+    
+    print("post:", send_url, send_data, headers)
+    
+
+    
+    print(send_url,)
     response = requests.post(send_url, json=send_data, headers=headers)
-    print(response.text)
+    print("response:", response.text) 
 
 @click.command()
 def profile():
@@ -121,6 +128,7 @@ cli.add_command(login)
 cli.add_command(profile)
 cli.add_command(get)
 cli.add_command(set)
+
     
 
 if __name__ == '__main__':
