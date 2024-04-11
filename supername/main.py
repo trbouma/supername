@@ -113,7 +113,18 @@ def info(ctx, debug):
 
 @click.command()
 def balance():
-    click.echo('Your balance:')
+    click.echo('Getting your balance...')
+    send_url = scheme + wallet_server + "/supername/balance"
+    headers = {"X-superkey": wallet_key }
+  
+    # print("get:", send_url, headers)
+   
+    print(send_url,)
+    response = requests.get(send_url, headers=headers)
+    print("response:", response.json()) 
+    balance_amt = response.json()['balance']
+
+    click.echo(f'Balance: {balance_amt}' )
 
 @click.command()
 @click.argument('key', default='None')
