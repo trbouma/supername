@@ -27,7 +27,7 @@ else:
 
 
 
-print(config_obj)
+# print(config_obj)
 
 wallet_server =config_obj['profile']['server']
 wallet_key =config_obj['profile']['key']
@@ -73,7 +73,32 @@ def send(amount, recipient, message):
 
 @click.command()
 def profile():
-    click.echo('Profile')
+    click.echo(f'Local: server: {wallet_server} key: {wallet_key}')
+
+    click.echo ('Getting details...')
+    send_url = scheme + wallet_server + "/supername/profile"
+    headers = {"X-superkey": wallet_key }
+
+    response = requests.get(send_url, headers=headers)
+    
+    profile_obj = response.json()
+
+    click.echo(f"Super Name: {profile_obj['wallet_name']}@{wallet_server}" )
+    click.echo(f"Balance: {profile_obj['balance']}" )
+
+@click.command()
+def did():
+    click.echo(f'Local: server: {wallet_server} key: {wallet_key}')
+
+    click.echo ('Getting details...')
+    send_url = scheme + wallet_server + "/supername/balance"
+    headers = {"X-superkey": wallet_key }
+
+    response = requests.get(send_url, headers=headers)
+    
+    balance_amt = response.json()['balance']
+
+    click.echo(f'Balance: {balance_amt}' )
 
 @click.command()
 @click.option('--key', default=None, help='set super key')
@@ -126,6 +151,22 @@ def balance():
 
     click.echo(f'Balance: {balance_amt}' )
 
+
+@click.command()
+def me():
+    click.echo('Getting your balance...')
+    send_url = scheme + wallet_server + "/supername/balance"
+    headers = {"X-superkey": wallet_key }
+  
+    # print("get:", send_url, headers)
+   
+    print(send_url,)
+    response = requests.get(send_url, headers=headers)
+    print("response:", response.json()) 
+    balance_amt = response.json()['balance']
+
+    click.echo(f'Balance: {balance_amt}' )
+
 @click.command()
 @click.argument('key', default='None')
 def login(key):
@@ -136,9 +177,11 @@ cli.add_command(receive)
 cli.add_command(balance)
 cli.add_command(info)
 cli.add_command(login)
+cli.add_command(profile,name="whoami")
 cli.add_command(profile)
 cli.add_command(get)
 cli.add_command(set)
+cli.add_command(did)
 
     
 
