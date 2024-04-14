@@ -84,6 +84,8 @@ def profile():
     profile_obj = response.json()
 
     click.echo(f"Super Name: {profile_obj['wallet_name']}@{wallet_server}" )
+    click.echo(f"Nostr Npub: {profile_obj['nostr_npub']}" )
+    click.echo(f"Nostr Nsec: {profile_obj['nostr_nsec']}" )
     click.echo(f"Balance: {profile_obj['balance']}" )
 
 @click.command()
@@ -134,7 +136,8 @@ def receive():
 @click.option('--debug/--no-debug', default=False)
 @click.pass_context
 def info(ctx, debug):
-    click.echo(f'Your wallet key: {wallet_key} {debug} {ctx.obj}')
+    click.echo(f'Your wallet key: {wallet_key}')
+    click.echo(f'Your wallet server: {wallet_server}')
 
 @click.command()
 def balance():
