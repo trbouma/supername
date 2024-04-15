@@ -65,11 +65,36 @@ def send(amount, recipient, message):
     
     print("post:", send_url, send_data, headers)
     
-
     
     print(send_url,)
     response = requests.post(send_url, json=send_data, headers=headers)
     print("response:", response.text) 
+
+
+@click.command()
+@click.argument('amount', default=21)
+def ecash(amount):
+    click.echo(f'ecash  {amount} ')
+
+   
+
+    send_url = scheme + wallet_server + "/supername/ecash"
+    headers = {"X-superkey": wallet_key }
+
+    send_data = {                    
+                    "amount": amount,                    
+                    "currency": "SAT"
+                }
+    
+
+    
+    # print("post:", send_url, send_data, headers)
+    
+    
+    # print(send_url,)
+    response = requests.post(send_url, json=send_data, headers=headers)
+    # print("response:", response.text) 
+    click.echo(response.json()["cashu_tokens"][0])
 
 @click.command()
 def profile():
@@ -185,7 +210,7 @@ cli.add_command(profile)
 cli.add_command(get)
 cli.add_command(set)
 cli.add_command(did)
-
+cli.add_command(ecash)
     
 
 if __name__ == '__main__':
