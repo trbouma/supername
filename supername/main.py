@@ -200,6 +200,32 @@ def me():
 def login(key):
     click.echo(f'Login with your key {key}')
 
+@click.command()
+@click.argument('message', default='Thank you!')
+def sign(message):
+    click.echo(f'message  {message} ')
+
+   
+
+    send_url = scheme + wallet_server + "/supername/sign"
+    headers = {"X-superkey": wallet_key }
+
+    send_data = {                    
+                    "msg": message,                    
+                    "digest": None,
+                    "alg": "schnorr"
+                }
+    
+
+    
+    
+    
+    
+    # print(send_url,)
+    response = requests.post(send_url, json=send_data, headers=headers)
+    # print("response:", response.text) 
+    click.echo(response.json())
+
 cli.add_command(send)
 cli.add_command(receive)
 cli.add_command(balance)
@@ -211,6 +237,7 @@ cli.add_command(get)
 cli.add_command(set)
 cli.add_command(did)
 cli.add_command(ecash)
+cli.add_command(sign)
     
 
 if __name__ == '__main__':
