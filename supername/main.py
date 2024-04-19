@@ -4,10 +4,12 @@ import yaml
 import requests
 import click, asyncio
 from functools import wraps
+from binascii import hexlify
 
 from fido2.hid import CtapHidDevice
-from fido2.client import Fido2Client, WindowsClient, UserInteraction
+from fido2.client import Fido2Client, UserInteraction
 from fido2.server import Fido2Server
+
 from getpass import getpass
 import sys
 import ctypes
@@ -254,46 +256,45 @@ def fido():
     click.echo(f'fido')
     uv = "discouraged"
 
-    if WindowsClient.is_available() and not ctypes.windll.shell32.IsUserAnAdmin():
-        # Use the Windows WebAuthn API if available, and we're not running as admin
-        client = WindowsClient("https://example.com")
+    
+    # Locate a device
+    dev = next(CtapHidDevice.list_devices(), None)
+    if dev is not None:
+        print("Use USB HID channel.")
     else:
-        # Locate a device
-        dev = next(CtapHidDevice.list_devices(), None)
-        if dev is not None:
-            print("Use USB HID channel.")
-        else:
-            try:
-                from fido2.pcsc import CtapPcscDevice
+        try:
+            from fido2.pcsc import CtapPcscDevice
 
-                dev = next(CtapPcscDevice.list_devices(), None)
-                print("Use NFC channel.")
-            except Exception as e:
-                print("NFC channel search error:", e)
+            dev = next(CtapPcscDevice.list_devices(), None)
+            print("Use NFC channel.")
+        except Exception as e:
+            print("NFC channel search error:", e)
 
-        if not dev:
-            print("No FIDO device found")
-            sys.exit(1)
+    if not dev:
+        print("No FIDO device found")
+        sys.exit(1)
 
-        # Set up a FIDO 2 client using the origin https://example.com
-        client = Fido2Client(dev, f"https://{wallet_server}", user_interaction=CliInteraction())
+    
+    # Set up a FIDO 2 client using the origin wallet_server
+    client = Fido2Client(dev, f"https://{wallet_server}", user_interaction=CliInteraction())
+    
 
-        # Prefer UV if supported and configured
-        if client.info.options.get("uv") or client.info.options.get("pinUvAuthToken"):
-            uv = "preferred"
-            print("Authenticator supports User Verification")
+    # Prefer UV if supported and configured
+    if client.info.options.get("uv") or client.info.options.get("pinUvAuthToken"):
+        uv = "preferred"
+        print("Authenticator supports User Verification")
 
     server = Fido2Server({"id": wallet_server, "name": "Example RP"}, attestation="direct")
 
-    user = {"id": b"user_id", "name": "A. User"}
+    user = {"id": wallet_key.encode(), "name": wallet_key}
     # Prepare parameters for makeCredential
     create_options, state = server.register_begin(
         user, user_verification=uv, authenticator_attachment="cross-platform"
     )
-
+    print("create options:", create_options)
     # Create a credential
     result = client.make_credential(create_options["publicKey"])
-
+    print("completed!", type(result))
     # Complete registration
     auth_data = server.register_complete(
         state, result.client_data, result.attestation_object
@@ -304,7 +305,11 @@ def fido():
     click.echo(f"CLIENT DATA: {result.client_data}")
     click.echo(f"ATTESTATION OBJECT: {result.attestation_object}")    
     click.echo(f"CREDENTIAL DATA: {auth_data.credential_data}")
-
+    click.echo(f"Credential: {auth_data.credential_data.aaguid}")
+    click.echo(f"Credential ID: {hexlify(auth_data.credential_data.credential_id).decode()}")
+    click.echo(f"Credential Public Key: {auth_data.credential_data.public_key}")
+  
+    x = input("Get Authentication")
     # Prepare parameters for getAssertion
     request_options, state = server.authenticate_begin(credentials, user_verification=uv)
 
@@ -330,6 +335,60 @@ def fido():
     # print()
     # print("AUTH DATA:", result.authenticator_data)
 
+@click.command()
+def register():
+    click.echo(f'register')
+    uv = "discouraged"
+
+    dev = next(CtapHidDevice.list_devices(), None)
+
+    send_url = scheme + wallet_server + "/supername/register/begin"
+    headers = {"X-superkey": wallet_key }
+    # print(send_url,)
+    response = requests.post(send_url, headers=headers)
+    register = response.json()
+    click.echo(f"register: {register}")
+    # click.echo(f"rp: {register['rp']}")
+    # click.echo(f"user: {register['user']}")
+    # click.echo(f"challenge: {register['challenge']}")
+    # click.echo(f"pubKeyCredParams: {register['pubKeyCredParams']}")
+    # click.echo(f"timeout: {register['timeout']}")
+    # click.echo(f"excludeCredentials: {register['excludeCredentials']}")
+    # click.echo(f"attestation: {register['attestation']}")
+
+
+    server = Fido2Server({"id": wallet_server, "name": register['rp']['name']}, attestation="direct")
+
+    try:
+        client = Fido2Client(dev, f"https://{register['rp']['id']}", user_interaction=CliInteraction())
+    except:
+        click.echo("No device found!")
+        sys.exit(1)
+    
+    user = {"id": wallet_key.encode(), "name": wallet_key}
+    # Prepare parameters for makeCredential
+    create_options, state = server.register_begin(
+        user, user_verification=uv, authenticator_attachment="cross-platform"
+    )
+    click.echo(f"create options publickey:  {create_options['publicKey']}")
+    click.echo(f"create options register:  {register}")
+
+    try:
+        result = client.make_credential(create_options["publicKey"])
+    except:
+        click.echo("Timeout!")
+        sys.exit(1) 
+
+    result_dict = dict(result)
+    # click.echo(f"result: {result_dict}")
+    # click.echo(f"clientDataJSON: {result_dict['clientDataJSON']}")
+    # click.echo(f"attestationObject: {result_dict['attestationObject']}")
+    # click.echo(f"extensionResults: {result_dict['extensionResults']}")
+    click.echo(f"result.client_data: {result.client_data}")
+    click.echo(f"state: {state}")
+
+    
+
 ###############################################################################
         
 cli.add_command(send)
@@ -345,6 +404,7 @@ cli.add_command(did)
 cli.add_command(ecash)
 cli.add_command(sign)
 cli.add_command(fido)
+cli.add_command(register)
     
 
 if __name__ == '__main__':
