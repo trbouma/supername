@@ -14,6 +14,27 @@ from getpass import getpass
 import sys
 import ctypes
 
+from enum import Enum
+import json
+
+import base64
+
+from webauthn import (
+    generate_registration_options,
+    verify_registration_response,
+    options_to_json,
+    base64url_to_bytes,
+)
+from webauthn.helpers.cose import COSEAlgorithmIdentifier
+from webauthn.helpers.structs import (
+    AttestationConveyancePreference,
+    AuthenticatorAttachment,
+    AuthenticatorSelectionCriteria,
+    PublicKeyCredentialDescriptor,
+    ResidentKeyRequirement,
+    PublicKeyCredentialCreationOptions
+)
+
 # Handle user interaction
 class CliInteraction(UserInteraction):
     def prompt_up(self):
@@ -26,6 +47,11 @@ class CliInteraction(UserInteraction):
         print("User Verification required.")
         return True
 
+class EnumEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Enum):
+            return obj.value  # or obj.name to serialize as the name
+        return json.JSONEncoder.default(self, obj)
 
 uv = "discouraged"
 
@@ -90,6 +116,24 @@ def send(amount, recipient, message):
     print("post:", send_url, send_data, headers)
     
     
+    print(send_url,)
+    response = requests.post(send_url, json=send_data, headers=headers)
+    print("response:", response.text) 
+
+@click.command
+@click.argument('message')
+def post(message):
+    click.echo(f"nostr post{message}")
+    send_url = scheme + wallet_server + "/supername/post"
+    headers = {"X-superkey": wallet_key }
+
+    send_data = {
+                    "msg": message
+                    
+                }
+
+    
+    # print("post:", send_url, send_data, headers)
     print(send_url,)
     response = requests.post(send_url, json=send_data, headers=headers)
     print("response:", response.text) 
@@ -183,10 +227,16 @@ def receive():
 
 @click.command()
 @click.option('--debug/--no-debug', default=False)
+@click.option('--server', default=None)
 @click.pass_context
-def info(ctx, debug):
+def config(ctx, debug, server):
     click.echo(f'Your wallet key: {wallet_key}')
     click.echo(f'Your wallet server: {wallet_server}')
+    if server:
+        click.echo(f"server: {server}")
+        config_obj['profile']['server']=server
+        with open(file_path, 'w') as file:        
+            yaml.dump(config_obj, file)
 
 @click.command()
 def balance():
@@ -348,6 +398,9 @@ def register():
     response = requests.post(send_url, headers=headers)
     register = response.json()
     click.echo(f"register: {register}")
+
+    json_data = json.dumps(register, cls=EnumEncoder)
+    click.echo(f"json_data: {json_data}")
     # click.echo(f"rp: {register['rp']}")
     # click.echo(f"user: {register['user']}")
     # click.echo(f"challenge: {register['challenge']}")
@@ -355,9 +408,14 @@ def register():
     # click.echo(f"timeout: {register['timeout']}")
     # click.echo(f"excludeCredentials: {register['excludeCredentials']}")
     # click.echo(f"attestation: {register['attestation']}")
+    hello_world = b'Hello, Worldss!'
+    click.echo(hello_world)
+    click.echo(base64.b64encode(hello_world))
+
+    
+    # server = Fido2Server({"id": wallet_server, "name": register['rp']['name']}, attestation="direct")
 
 
-    server = Fido2Server({"id": wallet_server, "name": register['rp']['name']}, attestation="direct")
 
     try:
         client = Fido2Client(dev, f"https://{register['rp']['id']}", user_interaction=CliInteraction())
@@ -367,25 +425,114 @@ def register():
     
     user = {"id": wallet_key.encode(), "name": wallet_key}
     # Prepare parameters for makeCredential
-    create_options, state = server.register_begin(
-        user, user_verification=uv, authenticator_attachment="cross-platform"
-    )
-    click.echo(f"create options publickey:  {create_options['publicKey']}")
+    # create_options, state = server.register_begin(
+    #     user, user_verification=uv, authenticator_attachment="cross-platform"
+    # )
+    # click.echo(f"create options publickey:  {create_options['publicKey']}")
+    
     click.echo(f"create options register:  {register}")
 
+    # Prepare parameters for makeCredential
+    rp = {"id": register['rp']['id'], "name": register['rp']['name']}
+    # rp = register['rp']
+    user = {"id": register['user']['id'].encode(), "name": register['user']['name']}
+    # user = register['user']
+    challenge = register['challenge']
+    challenge_padded = challenge +len(challenge)%4*"="
+    challenge_decoded = base64.b64decode(challenge_padded)
+    pub_key_cred_params = register['pubKeyCredParams']
+
+    credential_options = PublicKeyCredentialCreationOptions( rp=rp, 
+                                                             challenge=challenge_decoded, user=user, pub_key_cred_params=pub_key_cred_params
+                                                            )
+    
+    result = client.make_credential(options=
+    {
+        "rp": rp,
+        "user": user,
+        "challenge": challenge_decoded,
+        "pubKeyCredParams": pub_key_cred_params
+        
+    },
+    )
+
+    
+    click.echo(f"make credential: {result} \n client data: {result.client_data}")
+   # client_data_json = json.dump(result.client_data, cls=EnumEncoder)
+    
+    make_credential = {
+        "id": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "rawId": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "response": {
+            "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACBmggo_UlC8p2tiPVtNQ8nZ5NSxst4WS_5fnElA2viTq6QBAwM5AQAgWQEA31dtHqc70D_h7XHQ6V_nBs3Tscu91kBL7FOw56_VFiaKYRH6Z4KLr4J0S12hFJ_3fBxpKfxyMfK66ZMeAVbOl_wemY4S5Xs4yHSWy21Xm_dgWhLJjZ9R1tjfV49kDPHB_ssdvP7wo3_NmoUPYMgK-edgZ_ehttp_I6hUUCnVaTvn_m76b2j9yEPReSwl-wlGsabYG6INUhTuhSOqG-UpVVQdNJVV7GmIPHCA2cQpJBDZBohT4MBGme_feUgm4sgqVCWzKk6CzIKIz5AIVnspLbu05SulAVnSTB3NxTwCLNJR_9v9oSkvphiNbmQBVQH1tV_psyi9HM1Jtj9VJVKMeyFDAQAB",
+            "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQ2VUV29nbWcwY2NodWlZdUZydjhEWFhkTVpTSVFSVlpKT2dhX3hheVZWRWNCajBDdzN5NzN5aEQ0RmtHU2UtUnJQNmhQSkpBSW0zTFZpZW40aFhFTGciLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUwMDAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+            "transports": ["internal"  ]
+                },
+        "type": "public-key",
+        "authenticatorAttachment": "platform",
+        "clientExtensionResults": {}
+        }
+    
+    make_real_credential = {
+        "id": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "rawId": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "response": {
+            "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACBmggo_UlC8p2tiPVtNQ8nZ5NSxst4WS_5fnElA2viTq6QBAwM5AQAgWQEA31dtHqc70D_h7XHQ6V_nBs3Tscu91kBL7FOw56_VFiaKYRH6Z4KLr4J0S12hFJ_3fBxpKfxyMfK66ZMeAVbOl_wemY4S5Xs4yHSWy21Xm_dgWhLJjZ9R1tjfV49kDPHB_ssdvP7wo3_NmoUPYMgK-edgZ_ehttp_I6hUUCnVaTvn_m76b2j9yEPReSwl-wlGsabYG6INUhTuhSOqG-UpVVQdNJVV7GmIPHCA2cQpJBDZBohT4MBGme_feUgm4sgqVCWzKk6CzIKIz5AIVnspLbu05SulAVnSTB3NxTwCLNJR_9v9oSkvphiNbmQBVQH1tV_psyi9HM1Jtj9VJVKMeyFDAQAB",
+            "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQ2VUV29nbWcwY2NodWlZdUZydjhEWFhkTVpTSVFSVlpKT2dhX3hheVZWRWNCajBDdzN5NzN5aEQ0RmtHU2UtUnJQNmhQSkpBSW0zTFZpZW40aFhFTGciLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUwMDAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+            "transports": ["internal"  ]
+                },
+        "type": "public-key",
+        "authenticatorAttachment": "platform",
+        "clientExtensionResults": {}
+        }
+    # click.echo(make_credential)
+    # click.echo(make_real_credential)
+    send_url = scheme + wallet_server + "/supername/register/end"
+    # click.echo(send_url)
+    headers = {"X-superkey": wallet_key }
+    json_data = make_credential
+    # print(send_url,)
+    response = requests.post(send_url, json=make_real_credential,headers=headers)
+    register_end = response.json()
+    # click.echo(f"register end: {register_end}")
+
+
+
+    return
+
     try:
-        result = client.make_credential(create_options["publicKey"])
-    except:
-        click.echo("Timeout!")
+        # result = client.make_credential(create_options["publicKey"])
+        print("before make: ", register)
+        register['timeout'] = 0
+        register['attestation'] = 'direct'
+        register['user']['id'] = register['user']['id'].encode()
+        challenge = register['challenge']
+        challenge_padded = challenge +len(challenge)%4*"="
+        challenge_decoded = base64.b64decode(challenge_padded)
+        print("challenge",challenge)
+        print("challenge decoded", challenge_decoded)
+        print("challenge_padded", challenge_padded)
+        # register['challenge'] = base64.b64encode(hello_world)
+        print(register['challenge']+ len(register['challenge'])%4*"=")
+        register['challenge'] = challenge_decoded
+        print("make: ", register)
+        result = client.make_credential(register)
+    except Exception as e:
+        click.echo(f"Error! {e}")
         sys.exit(1) 
 
-    result_dict = dict(result)
+    
     # click.echo(f"result: {result_dict}")
     # click.echo(f"clientDataJSON: {result_dict['clientDataJSON']}")
     # click.echo(f"attestationObject: {result_dict['attestationObject']}")
     # click.echo(f"extensionResults: {result_dict['extensionResults']}")
     click.echo(f"result.client_data: {result.client_data}")
-    click.echo(f"state: {state}")
+    click.echo(f"result.client_data: {result.client_data.type}")
+    click.echo(f"result.client_data: {base64.b64encode(result.client_data.challenge).decode().replace('/','_').replace('+','-').replace('=','')}")
+    click.echo(f"result.client_data: {result.client_data.origin}")
+
+    
+    # click.echo(f"state: {state}")
 
     
 
@@ -394,7 +541,7 @@ def register():
 cli.add_command(send)
 cli.add_command(receive)
 cli.add_command(balance)
-cli.add_command(info)
+cli.add_command(config)
 cli.add_command(login)
 cli.add_command(profile,name="whoami")
 cli.add_command(profile)
@@ -405,6 +552,7 @@ cli.add_command(ecash)
 cli.add_command(sign)
 cli.add_command(fido)
 cli.add_command(register)
+cli.add_command(post)
     
 
 if __name__ == '__main__':
