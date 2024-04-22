@@ -132,12 +132,29 @@ def post(message):
                     
                 }
 
-    
-    # print("post:", send_url, send_data, headers)
+    print("post:", send_url, send_data, headers)
     print(send_url,)
     response = requests.post(send_url, json=send_data, headers=headers)
     print("response:", response.text) 
 
+@click.command
+@click.argument('recipient')
+@click.argument('message')
+def dm(recipient, message):
+    click.echo(f"nostr dm {recipient} {message}")
+    send_url = scheme + wallet_server + "/supername/dm"
+    headers = {"X-superkey": wallet_key }
+
+    send_data = {
+                    "recipient": recipient,
+                    "msg": message
+                    
+                }
+
+    print("post:", send_url, send_data, headers)
+    print(send_url,)
+    response = requests.post(send_url, json=send_data, headers=headers)
+    print("response:", response.text) 
 
 @click.command()
 @click.argument('amount', default=21)
@@ -553,6 +570,7 @@ cli.add_command(sign)
 cli.add_command(fido)
 cli.add_command(register)
 cli.add_command(post)
+cli.add_command(dm)
     
 
 if __name__ == '__main__':
