@@ -18,12 +18,14 @@ from enum import Enum
 import json
 
 import base64
+import cbor
 
 from webauthn import (
     generate_registration_options,
     verify_registration_response,
     options_to_json,
     base64url_to_bytes,
+    
 )
 from webauthn.helpers.cose import COSEAlgorithmIdentifier
 from webauthn.helpers.structs import (
@@ -32,7 +34,8 @@ from webauthn.helpers.structs import (
     AuthenticatorSelectionCriteria,
     PublicKeyCredentialDescriptor,
     ResidentKeyRequirement,
-    PublicKeyCredentialCreationOptions
+    PublicKeyCredentialCreationOptions,
+    AttestationObject
 )
 
 # Handle user interaction
@@ -197,6 +200,7 @@ def profile():
     click.echo(f"Nostr Npub: {profile_obj['nostr_npub']}" )
     click.echo(f"Nostr Nsec: {profile_obj['nostr_nsec']}" )
     click.echo(f"Balance: {profile_obj['balance']}" )
+    click.echo(f"Local Amount: {profile_obj['currency_symbol']}{profile_obj['local_amount']} {profile_obj['local_currency']}" )
 
 @click.command()
 def did():
@@ -358,25 +362,28 @@ def fido():
     create_options, state = server.register_begin(
         user, user_verification=uv, authenticator_attachment="cross-platform"
     )
-    print("create options:", create_options)
+    print("create options:", dict(create_options["publicKey"]))
     # Create a credential
     result = client.make_credential(create_options["publicKey"])
     print("completed!", type(result))
+   
     # Complete registration
     auth_data = server.register_complete(
         state, result.client_data, result.attestation_object
     )
-    credentials = [auth_data.credential_data]
-
+    credential_data = auth_data.credential_data
+    credentials = [credential_data]
+    
     click.echo("New credential created!")
-    click.echo(f"CLIENT DATA: {result.client_data}")
-    click.echo(f"ATTESTATION OBJECT: {result.attestation_object}")    
-    click.echo(f"CREDENTIAL DATA: {auth_data.credential_data}")
-    click.echo(f"Credential: {auth_data.credential_data.aaguid}")
-    click.echo(f"Credential ID: {hexlify(auth_data.credential_data.credential_id).decode()}")
-    click.echo(f"Credential Public Key: {auth_data.credential_data.public_key}")
+    # click.echo(f"CLIENT DATA: {result.client_data}")
+    # click.echo(f"ATTESTATION OBJECT: {result.attestation_object}")    
+    # click.echo(f"CREDENTIAL DATA: {auth_data.credential_data}")
+    # click.echo(f"Credential: {auth_data.credential_data.aaguid}")
+    # click.echo(f"Credential ID: {hexlify(auth_data.credential_data.credential_id).decode()}")
+    # click.echo(f"Credential Public Key: {auth_data.credential_data.public_key}")
   
-    x = input("Get Authentication")
+    # x = input("Get Authentication")
+    click.echo(f"{credentials}")
     # Prepare parameters for getAssertion
     request_options, state = server.authenticate_begin(credentials, user_verification=uv)
 
@@ -473,8 +480,12 @@ def register():
     },
     )
 
-    
-    click.echo(f"make credential: {result} \n client data: {result.client_data}")
+    click.echo(f"rp {rp}") 
+    click.echo(f"user {user}") 
+    click.echo(f"pubKeyCredParams {pub_key_cred_params}") 
+    click.echo(f"challenge decoded {challenge_decoded}") 
+
+   # click.echo(f"make credential: {result} \n client data: {result.client_data}")
    # client_data_json = json.dump(result.client_data, cls=EnumEncoder)
     
     make_credential = {
@@ -551,6 +562,75 @@ def register():
     
     # click.echo(f"state: {state}")
 
+@click.command()
+def webauthn():
+    click.echo(f'webauthn')  
+    rp_id="staging.nimo.cash"
+    user_name = "trbouma"
+
+    simple_registration_options = generate_registration_options(
+    rp_id=rp_id,
+    rp_name="Nimo Cash",
+    user_name=user_name,
+    )
+    
+    
+
+    simple_registration_options_json = json.loads(options_to_json(simple_registration_options))
+    click.echo(f"simple registration options json: {simple_registration_options_json}")
+    click.echo(f"rp id: {simple_registration_options_json['rp']}")
+    click.echo(f"user: {simple_registration_options_json['user']}")
+    click.echo(f"challenge: {simple_registration_options_json['challenge']}")
+    click.echo(f"pubKeyCredParams: {simple_registration_options_json['pubKeyCredParams']}")
+
+    dev = next(CtapHidDevice.list_devices(), None)
+    client = Fido2Client(dev, f"https://{rp_id}", user_interaction=CliInteraction())
+
+   
+
+    user_parm = simple_registration_options_json['user']
+    user_parm['id'] = base64url_to_bytes(user_parm['id'])
+    challenge_parm = base64url_to_bytes(simple_registration_options_json['challenge'])
+
+    result = client.make_credential(options=
+    {
+        "rp": simple_registration_options_json['rp'],
+        "user": user_parm,
+        "challenge": challenge_parm,
+        "pubKeyCredParams": simple_registration_options_json['pubKeyCredParams']
+        
+    },
+    )
+    
+    
+
+    click.echo(f"CLIENT DATA: {result.client_data}")
+    click.echo(f"ATTESTATION OBJECT:{result.attestation_object}")
+    # click.echo(f"{result.extension_results}")
+
+    id = base64.b64encode(result.attestation_object.auth_data.credential_data.credential_id).decode()
+    click.echo(f"base64 id {id}")
+    registration_verification = verify_registration_response(
+    # Demonstrating the ability to handle a plain dict version of the WebAuthn response
+    credential={
+        "id": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "rawId": "ZoIKP1JQvKdrYj1bTUPJ2eTUsbLeFkv-X5xJQNr4k6s",
+        "response": {
+            "attestationObject": "o2NmbXRkbm9uZWdhdHRTdG10oGhhdXRoRGF0YVkBZ0mWDeWIDoxodDQXD2R2YFuP5K65ooYyx5lc87qDHZdjRQAAAAAAAAAAAAAAAAAAAAAAAAAAACBmggo_UlC8p2tiPVtNQ8nZ5NSxst4WS_5fnElA2viTq6QBAwM5AQAgWQEA31dtHqc70D_h7XHQ6V_nBs3Tscu91kBL7FOw56_VFiaKYRH6Z4KLr4J0S12hFJ_3fBxpKfxyMfK66ZMeAVbOl_wemY4S5Xs4yHSWy21Xm_dgWhLJjZ9R1tjfV49kDPHB_ssdvP7wo3_NmoUPYMgK-edgZ_ehttp_I6hUUCnVaTvn_m76b2j9yEPReSwl-wlGsabYG6INUhTuhSOqG-UpVVQdNJVV7GmIPHCA2cQpJBDZBohT4MBGme_feUgm4sgqVCWzKk6CzIKIz5AIVnspLbu05SulAVnSTB3NxTwCLNJR_9v9oSkvphiNbmQBVQH1tV_psyi9HM1Jtj9VJVKMeyFDAQAB",
+            "clientDataJSON": "eyJ0eXBlIjoid2ViYXV0aG4uY3JlYXRlIiwiY2hhbGxlbmdlIjoiQ2VUV29nbWcwY2NodWlZdUZydjhEWFhkTVpTSVFSVlpKT2dhX3hheVZWRWNCajBDdzN5NzN5aEQ0RmtHU2UtUnJQNmhQSkpBSW0zTFZpZW40aFhFTGciLCJvcmlnaW4iOiJodHRwOi8vbG9jYWxob3N0OjUwMDAiLCJjcm9zc09yaWdpbiI6ZmFsc2V9",
+            "transports": ["internal"],
+        },
+        "type": "public-key",
+        "clientExtensionResults": {},
+        "authenticatorAttachment": "platform",
+    },
+    expected_challenge=base64url_to_bytes(
+        "CeTWogmg0cchuiYuFrv8DXXdMZSIQRVZJOga_xayVVEcBj0Cw3y73yhD4FkGSe-RrP6hPJJAIm3LVien4hXELg"
+    ),
+    expected_origin="http://localhost:5000",
+    expected_rp_id="localhost",
+    require_user_verification=True,
+)
     
 
 ###############################################################################
@@ -571,6 +651,7 @@ cli.add_command(fido)
 cli.add_command(register)
 cli.add_command(post)
 cli.add_command(dm)
+cli.add_command(webauthn)
     
 
 if __name__ == '__main__':

@@ -12,6 +12,16 @@ files = [
 ]
 
 [[package]]
+name = "cbor"
+version = "1.0.0"
+description = "RFC 7049 - Concise Binary Object Representation"
+optional = false
+python-versions = "*"
+files = [
+    {file = "cbor-1.0.0.tar.gz", hash = "sha256:13225a262ddf5615cbd9fd55a76a0d53069d18b07d2e9f19c39e6acb8609bbb6"},
+]
+
+[[package]]
 name = "cbor2"
 version = "5.6.3"
 description = "CBOR (de)serializer with extensive tag support"
@@ -490,4 +500,4 @@ pyOpenSSL = ">=23.3.0"
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10.4"
-content-hash = "9179e58056446e72ac9f4012c338b6f81209de8761967cccb13728e35295202a"
+content-hash = "162199b49b7fa8c82a6f246405c38bd5278b5e35060e154c686f5763ecf34814"
