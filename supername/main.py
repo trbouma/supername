@@ -195,12 +195,37 @@ def profile():
     response = requests.get(send_url, headers=headers)
     
     profile_obj = response.json()
+    wallet_name=profile_obj['wallet_name']
 
     click.echo(f"Super Name: {profile_obj['wallet_name']}@{wallet_server}" )
     click.echo(f"Nostr Npub: {profile_obj['nostr_npub']}" )
     click.echo(f"Nostr Nsec: {profile_obj['nostr_nsec']}" )
+    click.echo(f"Nostr Npub: {profile_obj['npub_hex']}" )
     click.echo(f"Balance: {profile_obj['balance']}" )
     click.echo(f"Local Amount: {profile_obj['currency_symbol']}{profile_obj['local_amount']} {profile_obj['local_currency']}" )
+
+    nip05_url = f"{scheme}{wallet_server}/.well-known/nostr.json/?name={wallet_name}" 
+    
+    nip_response_json = requests.get(nip05_url).json()
+    
+    pubkey      = nip_response_json['names'][wallet_name]
+    relays      = nip_response_json['relays'][pubkey]
+    metadata     = nip_response_json['metadata'][pubkey]
+    
+
+    print(pubkey)
+    print(relays)
+   
+    for item in metadata:
+        print(json.loads(item[0]))
+        if len(item) ==2: print(item[1])
+        if len(item) ==3: print(item[2])
+        
+
+            
+
+    
+    
 
 @click.command()
 def did():
@@ -631,7 +656,30 @@ def webauthn():
     expected_rp_id="localhost",
     require_user_verification=True,
 )
+
+@click.command()
+@click.argument('name')
+def verify(name):
+    click.echo(f'metadata')  
+    send_url = f"{scheme}{wallet_server}/.well-known/nostr.json/?name={name}"
+   
+    result = requests.get(send_url)
+
+    response_json = result.json()
+    # print(result.text)
+    pubkey = response_json['names'][name]
+    click.echo(pubkey)
     
+    verify_url = f"{scheme}{wallet_server}/supername/verify"
+    metadata = response_json['metadata'][pubkey]
+    for item in metadata:
+        data = {    "metadata": item,
+                    "pubkey": pubkey
+                }
+        print(item)
+        response = requests.post(verify_url, json=data)
+        click.echo(response.text)
+        
 
 ###############################################################################
         
@@ -652,6 +700,7 @@ cli.add_command(register)
 cli.add_command(post)
 cli.add_command(dm)
 cli.add_command(webauthn)
+cli.add_command(verify)
     
 
 if __name__ == '__main__':
